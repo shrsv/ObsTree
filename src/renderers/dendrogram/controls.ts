@@ -20,12 +20,27 @@ function iconButton(parent: HTMLElement, icon: string, label: string, onClick: (
  * a zoom in/out widget with a live percentage readout, and an export menu. Owned by
  * DendrogramRenderer itself (mounted into its own container) so it's available identically
  * in the main .ntr pane and in ```tree code-block embeds, with no extra wiring needed there.
+ *
+ * The cluster itself can start hidden (`defaultVisible: false`, used for code-block embeds so
+ * they don't clutter a note's reading view) behind a small always-visible toggle button, so it's
+ * still one click away either way.
  */
 export class DendrogramControls {
+	private toggleButton: HTMLElement;
 	private root: HTMLElement;
 	private zoomLabelEl: HTMLElement;
+	private visible: boolean;
 
-	constructor(container: HTMLElement, callbacks: DendrogramControlsCallbacks) {
+	constructor(container: HTMLElement, callbacks: DendrogramControlsCallbacks, defaultVisible: boolean) {
+		this.visible = defaultVisible;
+
+		this.toggleButton = container.createEl("button", {
+			cls: "clickable-icon obs-tree-controls-toggle",
+			attr: { "aria-label": "Show/hide tree controls" },
+		});
+		setIcon(this.toggleButton, "sliders-horizontal");
+		this.toggleButton.addEventListener("click", () => this.setVisible(!this.visible));
+
 		this.root = container.createDiv({ cls: "obs-tree-controls" });
 
 		const navRow = this.root.createDiv({ cls: "obs-tree-controls-nav" });
@@ -52,13 +67,26 @@ export class DendrogramControls {
 			menu.addItem((item) => item.setTitle("Export as HTML").setIcon("code-2").onClick(() => callbacks.onExport("html")));
 			menu.showAtMouseEvent(event);
 		});
+
+		this.applyVisibility();
 	}
 
 	setZoomPercent(k: number): void {
 		this.zoomLabelEl.setText(`${Math.round(k * 100)}%`);
 	}
 
+	private setVisible(visible: boolean): void {
+		this.visible = visible;
+		this.applyVisibility();
+	}
+
+	private applyVisibility(): void {
+		this.root.toggleClass("obs-tree-hidden", !this.visible);
+		this.toggleButton.toggleClass("is-active", this.visible);
+	}
+
 	destroy(): void {
 		this.root.remove();
+		this.toggleButton.remove();
 	}
 }

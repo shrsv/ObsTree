@@ -1,6 +1,6 @@
 import type { HierarchyPointNode } from "d3-hierarchy";
 import type { TreeNode } from "../../parser";
-import type { TreeRenderer } from "../types";
+import type { TreeRenderer, RendererMountOptions } from "../types";
 import { layoutTree } from "./layout";
 import { renderLinks, renderNodes } from "./render";
 import { PanZoomController } from "./panzoom";
@@ -45,8 +45,9 @@ export class DendrogramRenderer implements TreeRenderer {
 	 */
 	private autoFit = true;
 	private tooltipEl: HTMLElement | null = null;
+	private resizeObserver?: ResizeObserver;
 
-	mount(container: HTMLElement, tree: TreeNode): void {
+	mount(container: HTMLElement, tree: TreeNode, options: RendererMountOptions = {}): void {
 		this.container = container;
 		container.classList.add("obs-tree-dendrogram");
 
@@ -97,7 +98,18 @@ export class DendrogramRenderer implements TreeRenderer {
 				if (target) this.applyFocusStyles(target.data.id);
 			},
 			onExport: (format) => void this.exportImage(format),
+		}, options.controlsDefaultVisible ?? true);
+
+		// A code-block embed's container often isn't laid out with real dimensions yet at
+		// the instant mount() runs (Reading view can call the processor before the div is
+		// actually sized), so an immediate zoom-to-fit against a zero-size rect produces a
+		// wrong, too-small fit. zoomTo() no-ops on a zero-size rect; this observer re-fits
+		// (while autoFit is still on) once the container actually has a real size, and again
+		// on any later resize.
+		this.resizeObserver = new ResizeObserver(() => {
+			if (this.autoFit) this.zoomToNodes(this.currentNodes, true);
 		});
+		this.resizeObserver.observe(this.container);
 
 		this.renderTree(tree, true);
 	}
@@ -124,6 +136,7 @@ export class DendrogramRenderer implements TreeRenderer {
 
 	destroy(): void {
 		this.closeTooltip();
+		this.resizeObserver?.disconnect();
 		this.svg.removeEventListener("keydown", this.onKeyDown);
 		this.panZoom.destroy();
 		this.controls.destroy();
@@ -262,8 +275,12 @@ export class DendrogramRenderer implements TreeRenderer {
 	private zoomTo(nodes: HierarchyPointNode<TreeNode>[]): void {
 		if (nodes.length === 0) return;
 		const rect = this.container.getBoundingClientRect();
-		const width = rect.width || 600;
-		const height = rect.height || 400;
+		// Not laid out yet (e.g. a fresh code-block embed) — do nothing rather than fit
+		// against a wrong 0-size box; the mount()-time ResizeObserver retries once real
+		// dimensions land.
+		if (rect.width === 0 || rect.height === 0) return;
+		const width = rect.width;
+		const height = rect.height;
 
 		const xs = nodes.map((n) => n.y);
 		const ys = nodes.map((n) => n.x);

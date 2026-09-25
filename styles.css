@@ -230,6 +230,15 @@
 	fill: #1a1a1a;
 }
 
+/* Small always-visible toggle for the control cluster below — lets it default to hidden in
+   code-block embeds (kept out of the way of reading a note) without losing access to it. */
+.obs-tree-controls-toggle {
+	position: absolute;
+	top: 6px;
+	right: 6px;
+	z-index: 11;
+}
+
 /* Floating control cluster (nav pad + zoom widget + export), owned by DendrogramRenderer
    itself so it appears identically in the main .ntr pane and in code-block embeds. */
 .obs-tree-controls {

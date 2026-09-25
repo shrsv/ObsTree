@@ -179,6 +179,44 @@ so it reads as a floating pill rather than an opaque box hiding the canvas under
 that asymmetry if you touch `styles.css`'s `.obs-tree-controls-*` rules — the D-pad getting a box
 back was an earlier design that read as too heavy against the canvas.
 
+### Controls: minimize-by-default in embeds, always-visible toggle
+
+`TreeRenderer.mount()` takes an optional third `RendererMountOptions` argument
+(`{ controlsDefaultVisible?: boolean }`, default `true`). `codeBlockProcessor.ts` passes
+`{ controlsDefaultVisible: false }` — an inline ` ```tree ` embed defaults to just a small
+`sliders-horizontal` toggle icon (`.obs-tree-controls-toggle`, always rendered regardless of
+`defaultVisible`) in the corner, so it doesn't compete with reading the note; `ntrView.ts` passes
+nothing, so the main pane's dedicated canvas keeps the full cluster visible by default but the
+same toggle can still hide it there too. Don't special-case this per call site beyond passing the
+option — `DendrogramControls` owns the show/hide state and toggle button itself
+(`controls.ts`'s `setVisible`/`applyVisibility`), so both call sites get identical behavior for
+free.
+
+### Fitting a not-yet-laid-out container (code-block embeds)
+
+A fresh ` ```tree ` embed's container can have `getBoundingClientRect()` report `0×0` at the
+exact moment `mount()` runs — Reading view sometimes invokes the code-block processor before the
+div is actually sized in the layout — so an immediate zoom-to-fit computed against that produces
+a wrong, too-small result (this was a real bug, not hypothetical: embeds rendered "shrunk" until
+manually re-fit). Two changes fix it together: `zoomTo()` now no-ops entirely when the container's
+rect is zero-size (rather than falling back to a guessed 600×400), and `mount()` sets up a
+`ResizeObserver` on the container that re-fits (only while `autoFit` is still on) on every resize
+— including the first one, which fires once the container gets its real laid-out size and is what
+actually performs the correct initial fit. This also means pane/window resizes keep the tree
+fitted while in fit mode, which the old code didn't do at all. Don't remove the `ResizeObserver`
+thinking the initial `renderTree(tree, true)` call's own `zoomToNodes` is sufficient — that call
+is a no-op harmless fallback for the case where the container already has a size (e.g. the main
+`.ntr` pane, which usually does); the embed case depends on the observer.
+
+### Code-block height directive
+
+` ```tree ` embeds default to 420px tall (`codeBlockProcessor.ts`'s `DEFAULT_HEIGHT_PX`). A
+`height: <px>` directive on the block's first non-blank line (parsed by `extractHeightDirective`,
+clamped to `[150, 2000]`) overrides it and is stripped before the rest is handed to `buildTree()`.
+This lives in `codeBlockProcessor.ts`, not `parser.ts` — it's specific to how an embed is sized on
+the page, not part of the dash-outline syntax itself; `.ntr` files (which size to their whole
+pane) have no equivalent directive and shouldn't need one.
+
 ### Export
 
 `exportSvg.ts`'s `buildExportSvg()` clones the *current* `nodesGroup`/`linksGroup` SVG elements

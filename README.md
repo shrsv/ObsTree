@@ -30,7 +30,17 @@ energy
 ## Two ways to use it
 
 - **Inline in any note**: wrap the outline in a ` ```tree ` fenced code block. Renders inline in
-  Reading view and Live Preview, updating whenever the block's text changes.
+  Reading view and Live Preview, updating whenever the block's text changes. The controls
+  cluster starts minimized here (just a small toggle icon in the corner) so it doesn't clutter
+  reading — click it to show the nav/zoom/export controls. Default height is 420px; add a
+  `height: <px>` line as the block's first line to override it, e.g.:
+  ````
+  ```tree
+  height: 600
+  time
+  - pulse
+  ```
+  ````
 - **Dedicated `.ntr` files**: a standalone tree file. The main pane is a preview-only canvas;
   editing happens in the **ObsTree sidebar** (see below) so you always see the live dendrogram
   next to what you're typing, instead of switching between an edit mode and a preview mode.
@@ -98,7 +108,8 @@ A floating control cluster in the bottom-right corner mirrors all of this with c
 buttons — a directional pad (↑↓←→ plus a center "zoom to fit"), a +/− zoom widget with a live
 percentage readout, and an export button — so nothing here requires the keyboard. It's part of
 the dendrogram itself, so it shows up identically in a `.ntr` file's main pane and in an inline
-` ```tree ` code block.
+` ```tree ` code block. A small toggle icon (⚙ top-right) shows/hides the whole cluster — visible
+by default in the main `.ntr` pane, hidden by default in code-block embeds (click it to reveal).
 
 ## Exporting
 
