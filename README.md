@@ -60,6 +60,13 @@ you can override it explicitly:
 
 Clearing the name (or setting it back to the filename) removes the override.
 
+## Long node text
+
+Labels word-wrap up to 3 lines; anything beyond that is ellipsis-truncated. Click a truncated
+label to see the full text in a popover (dismiss with Escape or by clicking elsewhere). Sibling
+spacing scales with how many lines a node wraps to, so long labels get more vertical room
+instead of overlapping their neighbors.
+
 ## Fit mode
 
 The dendrogram starts in "fit" mode — zoomed to show the whole tree — and stays there as you

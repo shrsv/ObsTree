@@ -64,7 +64,9 @@ Matrix, etc. from notes2tree's picker) — those are explicitly out of scope for
 - `src/renderers/dendrogram/` — the only renderer: `DendrogramRenderer.ts` (lifecycle/orchestration),
   `layout.ts` (`d3-hierarchy` tree layout), `render.ts` (SVG DOM building, `d3-shape` link paths),
   `panzoom.ts` (`d3-zoom`/`d3-selection`/`d3-transition` pan/zoom + animated transitions),
-  `keyboardNav.ts` (arrow-key traversal state — fully custom, no library covers this).
+  `keyboardNav.ts` (arrow-key traversal state — fully custom, no library covers this),
+  `textMeasure.ts` (canvas-measured word-wrap + ellipsis truncation, shared by `layout.ts` and
+  `render.ts` so they always wrap identically — see "Label wrapping" below).
 
 ## UX shape: sidebar editor, not in-pane edit/preview toggle
 
@@ -106,6 +108,26 @@ shares one override across all of them (keyed by the note's path, not per-block)
 simplification since one tree per note is the common case. `TreeView.refreshRootLabel()` and
 `ObsTreePlugin.refreshTreeViewsForFile()` push a changed override into any already-open views;
 without that, only the next render (reopen/edit) would pick it up.
+
+### Label wrapping
+
+`textMeasure.ts`'s `wrapLabel()` greedily word-wraps a label to `MAX_LABEL_WIDTH` (180px),
+capped at `MAX_LABEL_LINES` (3); anything past that is binary-search-truncated to an ellipsis on
+the last line. It's called from two places that must never disagree:
+
+- `layout.ts` calls it up front for every node to get each one's line count, which feeds
+  `d3.tree().separation()` — the multiplier that gives multi-line nodes proportionally more
+  sibling spacing than one-line nodes, so wrapped text doesn't collide with the row above/below
+  (this was the original bug: fixed per-node spacing regardless of content height).
+  `LEVEL_SPACING` (220px) is sized to clear `MAX_LABEL_WIDTH` plus a gap before the next depth
+  level's nodes.
+- `render.ts` calls it again per node to build the actual `<tspan>` lines. Truncated nodes get a
+  `<title>` (native hover tooltip) and a click handler (`stopPropagation()`'d so it doesn't also
+  trigger the node's own zoom-to-node click) that asks `DendrogramRenderer` to show a full-text
+  popover (`showTooltip`/`closeTooltip`, dismissed on outside click or Escape).
+
+Both call sites use the same exported constants, so if you change wrap width/line cap, change it
+once in `textMeasure.ts` — never hardcode it in `layout.ts` or `render.ts`.
 
 ### Fit mode
 

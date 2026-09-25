@@ -1,6 +1,6 @@
 {
 	"name": "obs-tree",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"description": "Turn dash-indented outlines into interactive dendrogram visualizations in Obsidian.",
 	"main": "main.js",
 	"scripts": {

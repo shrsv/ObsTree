@@ -41,6 +41,7 @@ export class DendrogramRenderer implements TreeRenderer {
 	 * root node, or the "Zoom to fit" button).
 	 */
 	private autoFit = true;
+	private tooltipEl: HTMLElement | null = null;
 
 	mount(container: HTMLElement, tree: TreeNode): void {
 		this.container = container;
@@ -83,21 +84,28 @@ export class DendrogramRenderer implements TreeRenderer {
 	}
 
 	destroy(): void {
+		this.closeTooltip();
 		this.svg.removeEventListener("keydown", this.onKeyDown);
 		this.panZoom.destroy();
 		while (this.container.firstChild) this.container.removeChild(this.container.firstChild);
 	}
 
 	private renderTree(tree: TreeNode, isInitial: boolean): void {
+		this.closeTooltip();
 		const { nodes, links } = layoutTree(tree);
 		this.currentNodes = nodes;
 		this.keyboardNav.setNodes(nodes);
 
 		renderLinks(this.linksGroup, links);
-		this.nodesById = renderNodes(this.nodesGroup, nodes, (nodeId) => {
-			const target = nodes.find((n) => n.data.id === nodeId);
-			if (target) this.focusAndZoom(target);
-		});
+		this.nodesById = renderNodes(
+			this.nodesGroup,
+			nodes,
+			(nodeId) => {
+				const target = nodes.find((n) => n.data.id === nodeId);
+				if (target) this.focusAndZoom(target);
+			},
+			(fullText, clientX, clientY) => this.showTooltip(fullText, clientX, clientY)
+		);
 
 		let toFocus = nodes[0];
 		if (this.lastFocusedPath) {
@@ -163,6 +171,44 @@ export class DendrogramRenderer implements TreeRenderer {
 		this.lastFocusedPath = node ? nodePath(node) : null;
 	}
 
+	/** Full-text popover for a truncated (ellipsis-wrapped) node label — dismissed on outside click or Escape. */
+	private showTooltip(text: string, clientX: number, clientY: number): void {
+		this.closeTooltip();
+
+		const rect = this.container.getBoundingClientRect();
+		const el = document.createElement("div");
+		el.className = "obs-tree-tooltip";
+		el.textContent = text;
+		this.container.appendChild(el);
+		this.tooltipEl = el;
+
+		const left = Math.min(clientX - rect.left + 12, Math.max(0, rect.width - el.offsetWidth - 8));
+		const top = Math.min(clientY - rect.top + 12, Math.max(0, rect.height - el.offsetHeight - 8));
+		el.style.left = `${Math.max(0, left)}px`;
+		el.style.top = `${Math.max(0, top)}px`;
+
+		window.setTimeout(() => document.addEventListener("mousedown", this.onOutsideClick), 0);
+		document.addEventListener("keydown", this.onTooltipKeyDown);
+	}
+
+	private closeTooltip(): void {
+		if (!this.tooltipEl) return;
+		this.tooltipEl.remove();
+		this.tooltipEl = null;
+		document.removeEventListener("mousedown", this.onOutsideClick);
+		document.removeEventListener("keydown", this.onTooltipKeyDown);
+	}
+
+	private onOutsideClick = (event: MouseEvent): void => {
+		if (this.tooltipEl && !this.tooltipEl.contains(event.target as Node)) {
+			this.closeTooltip();
+		}
+	};
+
+	private onTooltipKeyDown = (event: KeyboardEvent): void => {
+		if (event.key === "Escape") this.closeTooltip();
+	};
+
 	/** isFullFit=true both fits `nodes` now and (re-)enables auto-fit for future updates. */
 	private zoomToNodes(nodes: HierarchyPointNode<TreeNode>[], isFullFit: boolean): void {
 		this.autoFit = isFullFit;
@@ -178,7 +224,7 @@ export class DendrogramRenderer implements TreeRenderer {
 		const xs = nodes.map((n) => n.y);
 		const ys = nodes.map((n) => n.x);
 		const minX = Math.min(...xs) - 40;
-		const maxX = Math.max(...xs) + 140;
+		const maxX = Math.max(...xs) + 200; // room for a node's own wrapped label (MAX_LABEL_WIDTH) plus padding
 		const minY = Math.min(...ys) - 30;
 		const maxY = Math.max(...ys) + 30;
 
