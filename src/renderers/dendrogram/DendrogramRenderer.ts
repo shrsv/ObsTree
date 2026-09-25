@@ -34,6 +34,13 @@ export class DendrogramRenderer implements TreeRenderer {
 	private nodesById = new Map<string, SVGGElement>();
 	private currentNodes: HierarchyPointNode<TreeNode>[] = [];
 	private lastFocusedPath: string[] | null = null;
+	/**
+	 * "Fit mode": on by default, and stays on across re-renders (new/removed nodes keep
+	 * getting auto-fitted) until the user manually pans/zooms or navigates to a specific
+	 * node/subtree. Re-enabled by zooming to the whole tree again (Escape, clicking the
+	 * root node, or the "Zoom to fit" button).
+	 */
+	private autoFit = true;
 
 	mount(container: HTMLElement, tree: TreeNode): void {
 		this.container = container;
@@ -56,7 +63,11 @@ export class DendrogramRenderer implements TreeRenderer {
 		this.nodesGroup.setAttribute("class", "obs-tree-nodes");
 		zoomGroup.appendChild(this.nodesGroup);
 
-		this.panZoom = new PanZoomController(this.svg, zoomGroup);
+		this.panZoom = new PanZoomController(this.svg, zoomGroup, {
+			onUserInteraction: () => {
+				this.autoFit = false;
+			},
+		});
 		this.svg.addEventListener("keydown", this.onKeyDown);
 
 		this.renderTree(tree, true);
@@ -98,8 +109,8 @@ export class DendrogramRenderer implements TreeRenderer {
 			this.applyFocusStyles(toFocus.data.id);
 		}
 
-		if (isInitial) {
-			this.zoomTo(nodes);
+		if (isInitial || this.autoFit) {
+			this.zoomToNodes(nodes, true);
 		}
 	}
 
@@ -121,12 +132,12 @@ export class DendrogramRenderer implements TreeRenderer {
 			case "Enter":
 			case " ": {
 				const focused = this.keyboardNav.getFocused();
-				if (focused) this.zoomTo(focused.descendants());
+				if (focused) this.zoomToNodes(focused.descendants(), focused.data.id === "root");
 				event.preventDefault();
 				return;
 			}
 			case "Escape":
-				this.zoomTo(this.currentNodes);
+				this.zoomToNodes(this.currentNodes, true);
 				event.preventDefault();
 				return;
 			default:
@@ -141,7 +152,7 @@ export class DendrogramRenderer implements TreeRenderer {
 	private focusAndZoom(node: HierarchyPointNode<TreeNode>): void {
 		this.keyboardNav.focusId(node.data.id);
 		this.applyFocusStyles(node.data.id);
-		this.zoomTo(node.descendants());
+		this.zoomToNodes(node.descendants(), node.data.id === "root");
 	}
 
 	private applyFocusStyles(id: string): void {
@@ -150,6 +161,12 @@ export class DendrogramRenderer implements TreeRenderer {
 		}
 		const node = this.currentNodes.find((n) => n.data.id === id);
 		this.lastFocusedPath = node ? nodePath(node) : null;
+	}
+
+	/** isFullFit=true both fits `nodes` now and (re-)enables auto-fit for future updates. */
+	private zoomToNodes(nodes: HierarchyPointNode<TreeNode>[], isFullFit: boolean): void {
+		this.autoFit = isFullFit;
+		this.zoomTo(nodes);
 	}
 
 	private zoomTo(nodes: HierarchyPointNode<TreeNode>[]): void {

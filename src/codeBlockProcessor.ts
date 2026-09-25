@@ -18,12 +18,14 @@ class TreeRenderChild extends MarkdownRenderChild {
 export function registerTreeCodeBlockProcessor(plugin: ObsTreePlugin): void {
 	plugin.registerMarkdownCodeBlockProcessor("tree", (source, el, ctx) => {
 		const file = plugin.app.vault.getAbstractFileByPath(ctx.sourcePath);
+		const override = file instanceof TFile ? plugin.settings.rootLabelOverrides[file.path] : undefined;
 		const rootLabel =
-			file instanceof TFile && plugin.settings.rootLabelStrategy === "auto"
+			override ??
+			(file instanceof TFile && plugin.settings.rootLabelStrategy === "auto"
 				? getMarkdownRootLabel(plugin.app, file)
 				: file instanceof TFile
 					? file.basename
-					: "Tree";
+					: "Tree");
 
 		const tree = buildTree(source, rootLabel);
 

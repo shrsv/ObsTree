@@ -49,6 +49,11 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+	cursor: pointer;
+}
+
+.obs-tree-sidebar-title:hover {
+	text-decoration: underline dotted;
 }
 
 .obs-tree-sidebar-empty {
@@ -57,16 +62,45 @@
 	font-size: 0.9em;
 }
 
-.obs-tree-sidebar-textarea {
+.obs-tree-sidebar-editor {
 	flex: 1;
 	min-height: 0;
-	width: 100%;
-	resize: none;
+	overflow: hidden;
+}
+
+.obs-tree-sidebar-editor .cm-editor {
+	height: 100%;
 	font-family: var(--font-monospace);
 	font-size: 0.9em;
-	padding: 0.75em;
-	border: none;
 	background: var(--background-primary);
+	color: var(--text-normal);
+}
+
+.obs-tree-sidebar-editor .cm-scroller {
+	overflow: auto;
+}
+
+.obs-tree-sidebar-editor .cm-gutters {
+	background: var(--background-primary);
+	color: var(--text-faint);
+	border-right: 1px solid var(--background-modifier-border);
+}
+
+.obs-tree-sidebar-editor .cm-activeLine,
+.obs-tree-sidebar-editor .cm-activeLineGutter {
+	background: var(--background-modifier-hover);
+}
+
+.obs-tree-sidebar-editor .cm-selectionBackground {
+	background: var(--text-selection) !important;
+}
+
+.obs-tree-sidebar-editor .cm-searchMatch {
+	background: var(--text-highlight-bg);
+}
+
+.obs-tree-sidebar-editor .cm-panels {
+	background: var(--background-secondary);
 	color: var(--text-normal);
 }
 

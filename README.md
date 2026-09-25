@@ -35,18 +35,38 @@ energy
 
 ### Creating a `.ntr` file
 
-- **Right-click a folder** in the file explorer → **New tree** — creates it there immediately
-  (same pattern as "New canvas"/"New drawing"), no prompts.
+- **Right-click a folder** in the file explorer → **New tree** — the location is already known
+  from the click, so this just asks for a name and creates it there immediately.
 - **Ribbon icon** (or the "Toggle ObsTree sidebar" command) opens the sidebar. If no tree is
   currently focused, it asks which folder and name to create one with.
 - **"New tree note"** command — same folder/name prompt, from anywhere.
 
 ## The ObsTree sidebar
 
-Click the ribbon icon to toggle a right-sidebar panel containing a text editor, similar to a
-chat sidebar. It always edits whichever `.ntr` file was most recently focused in the main area —
-type there, and the dendrogram in the main pane updates live. Click "New Tree" in the sidebar at
-any time to create and open another one.
+Click the ribbon icon to toggle a right-sidebar panel containing a real editor (the same
+CodeMirror engine Obsidian's own notes use — undo/redo, selection, Ctrl+F search all work),
+similar to a chat sidebar. It always edits whichever `.ntr` file was most recently focused in
+the main area — type there, and the dendrogram in the main pane updates live. Click "New Tree"
+in the sidebar at any time to create and open another one.
+
+## Renaming the root node
+
+The root node's label defaults to the file's H1 (markdown notes) or filename (`.ntr` files), but
+you can override it explicitly:
+
+- Right-click a `.ntr` file in the file explorer → **Rename tree**.
+- Run the **"Rename tree"** command while a tree is open.
+- Click the tree's name at the top of the ObsTree sidebar.
+
+Clearing the name (or setting it back to the filename) removes the override.
+
+## Fit mode
+
+The dendrogram starts in "fit" mode — zoomed to show the whole tree — and stays there as you
+type, so newly added nodes are automatically kept in view. Manually panning/zooming, or
+navigating into a specific node (click, or Enter/Space on a focused node), switches out of fit
+mode so your view isn't yanked around. Press **Escape**, click the root node, or hit **"Zoom to
+fit"** to snap back to fit mode.
 
 ## Interacting with the dendrogram
 

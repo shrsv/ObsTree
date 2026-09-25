@@ -1,9 +1,11 @@
-import { Plugin, TFolder } from "obsidian";
+import { Plugin, TFile, TFolder } from "obsidian";
 import { DEFAULT_SETTINGS, ObsTreeSettings, ObsTreeSettingTab, openHotkeySettings } from "./src/settings";
 import { registerTreeCodeBlockProcessor } from "./src/codeBlockProcessor";
 import { TreeView, VIEW_TYPE_TREE } from "./src/ntrView";
 import { TreeSidebarView, VIEW_TYPE_TREE_SIDEBAR } from "./src/sidebarView";
 import { NewTreeModal } from "./src/newTreeModal";
+import { NameModal } from "./src/nameModal";
+import { promptRenameTree } from "./src/renameTree";
 import { createUniqueTreeFile } from "./src/createTree";
 
 export default class ObsTreePlugin extends Plugin {
@@ -24,7 +26,7 @@ export default class ObsTreePlugin extends Plugin {
 
 		// Track whichever .ntr file was most recently the active/focused leaf, so the
 		// sidebar (which lives in its own leaf) knows what to edit even after the user
-		// clicks into its own textarea.
+		// clicks into its own editor.
 		this.registerEvent(
 			this.app.workspace.on("active-leaf-change", (leaf) => {
 				const view = leaf?.view;
@@ -35,21 +37,30 @@ export default class ObsTreePlugin extends Plugin {
 			})
 		);
 
-		// Mirrors how Excalidraw/Canvas add "New drawing"/"New canvas" to a folder's
-		// right-click menu: location is already known (the folder), so create+open
-		// immediately with an auto-incremented name, no modal.
 		this.registerEvent(
 			this.app.workspace.on("file-menu", (menu, file) => {
-				if (!(file instanceof TFolder)) return;
-				menu.addItem((item) =>
-					item
-						.setTitle("New tree")
-						.setIcon("network")
-						.onClick(async () => {
-							const created = await createUniqueTreeFile(this.app, file.path, "Untitled tree");
-							await this.app.workspace.getLeaf("tab").openFile(created);
-						})
-				);
+				if (file instanceof TFolder) {
+					// Location is already known (the clicked folder), so just ask for a name —
+					// mirrors how Excalidraw/Canvas add "New drawing"/"New canvas" here.
+					menu.addItem((item) =>
+						item
+							.setTitle("New tree")
+							.setIcon("network")
+							.onClick(() => {
+								new NameModal(this.app, "New tree", "Untitled tree", async (name) => {
+									const created = await createUniqueTreeFile(this.app, file.path, name || "Untitled tree");
+									await this.app.workspace.getLeaf("tab").openFile(created);
+								}).open();
+							})
+					);
+				} else if (file instanceof TFile && file.extension === "ntr") {
+					menu.addItem((item) =>
+						item
+							.setTitle("Rename tree")
+							.setIcon("pencil")
+							.onClick(() => promptRenameTree(this, file))
+					);
+				}
 			})
 		);
 
@@ -71,6 +82,17 @@ export default class ObsTreePlugin extends Plugin {
 		});
 
 		this.addCommand({
+			id: "rename-tree",
+			name: "Rename tree",
+			checkCallback: (checking) => {
+				const view = this.app.workspace.getActiveViewOfType(TreeView);
+				if (!view?.file) return false;
+				if (!checking) promptRenameTree(this, view.file);
+				return true;
+			},
+		});
+
+		this.addCommand({
 			id: "customize-hotkeys",
 			name: "Customize hotkeys...",
 			callback: () => openHotkeySettings(this.app),
@@ -81,6 +103,19 @@ export default class ObsTreePlugin extends Plugin {
 		if (this.activeTreeView === view) {
 			this.activeTreeView = null;
 			this.sidebarView?.bindTo(null);
+		}
+	}
+
+	/** Called after a root-label override changes, to refresh any open views of that file. */
+	refreshTreeViewsForFile(file: TFile): void {
+		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_TREE)) {
+			const view = leaf.view;
+			if (view instanceof TreeView && view.file === file) {
+				view.refreshRootLabel();
+				if (this.sidebarView?.isBoundTo(view)) {
+					this.sidebarView.bindTo(view);
+				}
+			}
 		}
 	}
 

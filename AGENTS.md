@@ -39,9 +39,17 @@ Matrix, etc. from notes2tree's picker) — those are explicitly out of scope for
 - `src/debounce.ts` — generic debounce utility, used by `TreeView.applyText`'s re-render.
 - `src/createTree.ts` — `ensureFolder`/`createUniqueTreeFile`, the shared file-creation helper
   used by the folder context-menu item, `NewTreeModal`, and the `new-tree-note` command.
-- `src/newTreeModal.ts` — `NewTreeModal`, a small folder+name prompt used whenever there's no
-  implicit location for a new tree (ribbon/sidebar/command paths — a folder right-click already
-  has one, see below).
+- `src/newTreeModal.ts` — `NewTreeModal`, a folder+name prompt used whenever there's no implicit
+  location for a new tree (ribbon/sidebar/command paths — a folder right-click already has one).
+- `src/nameModal.ts` — `NameModal`, a single-field name prompt; reused by the folder-right-click
+  "New tree" (location already known, only the name is asked) and by "Rename tree".
+- `src/renameTree.ts` — `promptRenameTree(plugin, file)`: opens `NameModal`, writes/clears
+  `settings.rootLabelOverrides[file.path]`, and refreshes any open views of that file.
+- `src/sidebarEditor.ts` — `SidebarEditor`, a thin CodeMirror 6 wrapper (`@codemirror/view` /
+  `-state` / `-commands` / `-search`, all marked `external` in `esbuild.config.mjs` so they
+  resolve against Obsidian's own bundled CM6 at runtime instead of shipping a second copy). This
+  is what the sidebar actually edits in — not a `<textarea>` — so undo/redo, selection, and
+  Ctrl+F search work like a normal editor.
 - `src/settings.ts` — `ObsTreeSettings`, defaults, settings tab, `openHotkeySettings` helper.
 - `src/codeBlockProcessor.ts` — registers the ` ```tree ` fenced-code-block processor for
   regular `.md` notes.
@@ -81,12 +89,35 @@ state) if the bound file's leaf gets closed.
 
 - **Folder right-click → "New tree"** (registered via the `file-menu` workspace event, mirroring
   how Excalidraw adds "New drawing" to the same menu): the location is already known from the
-  click target, so this creates + opens immediately with an auto-incremented name, no modal —
-  matches native "New note"/"New canvas" behavior.
+  click target, so this only asks for a name (`NameModal`), then creates + opens immediately.
 - **Ribbon icon / "New tree note" command / sidebar's "New Tree" button**: no implicit location,
-  so these open `NewTreeModal` to ask for a folder and name first. The ribbon specifically only
+  so these open `NewTreeModal` to ask for a folder *and* name first. The ribbon specifically only
   prompts when there's no `activeTreeView` yet — if you already have a tree focused, toggling the
   sidebar just reveals/hides it against that tree, it doesn't ask again.
+
+### Root-label overrides
+
+`settings.rootLabelOverrides` (`Record<file path, label>`) lets a user override the auto-derived
+root label (H1-else-filename for markdown, filename for `.ntr`) via "Rename tree" — reachable
+from a `.ntr` file's file-explorer context menu, the "Rename tree" command, or clicking the
+sidebar's title. It's keyed by file path rather than stored in the file itself, per the
+`.ntr`-is-plain-text rule below. One caveat: a markdown note with multiple `​```tree` blocks
+shares one override across all of them (keyed by the note's path, not per-block) — an accepted
+simplification since one tree per note is the common case. `TreeView.refreshRootLabel()` and
+`ObsTreePlugin.refreshTreeViewsForFile()` push a changed override into any already-open views;
+without that, only the next render (reopen/edit) would pick it up.
+
+### Fit mode
+
+`DendrogramRenderer.autoFit` starts `true` and stays `true` across `update()` calls (so it
+re-fits automatically as nodes are added/removed while typing) until the user manually pans/
+zooms (detected via `PanZoomController`'s `onUserInteraction`, which only fires for
+`event.sourceEvent`-driven — i.e. real user — zoom events, never programmatic `transformTo()`
+calls) or navigates to a specific node/subtree. Zooming to the *whole* tree again (Escape,
+clicking the root node, or the toolbar's "Zoom to fit") sets it back to `true`. See
+`zoomToNodes(nodes, isFullFit)` in `DendrogramRenderer.ts` — this is the one method that both
+performs a zoom and decides whether to re-arm auto-fit; every zoom call in the file goes through
+it rather than touching `autoFit` directly.
 
 ## Conventions
 

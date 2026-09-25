@@ -6,6 +6,8 @@ export interface ObsTreeSettings {
 	rootLabelStrategy: "auto" | "filename";
 	nodeTheme: "auto" | "dark" | "light";
 	debounceMs: number;
+	/** Explicit root-label overrides set via "Rename tree", keyed by vault-relative file path. */
+	rootLabelOverrides: Record<string, string>;
 }
 
 export const DEFAULT_SETTINGS: ObsTreeSettings = {
@@ -13,6 +15,7 @@ export const DEFAULT_SETTINGS: ObsTreeSettings = {
 	rootLabelStrategy: "auto",
 	nodeTheme: "auto",
 	debounceMs: 200,
+	rootLabelOverrides: {},
 };
 
 // Obsidian doesn't expose a public API for a plugin to jump straight into its own

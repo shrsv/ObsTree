@@ -2,16 +2,23 @@ import { select, type Selection } from "d3-selection";
 import { zoom, zoomIdentity, type ZoomBehavior, type ZoomTransform } from "d3-zoom";
 import "d3-transition";
 
+export interface PanZoomOptions {
+	onTransform?: (t: ZoomTransform) => void;
+	/** Fired only for user-driven pan/zoom (wheel/drag), never for programmatic transformTo(). */
+	onUserInteraction?: () => void;
+}
+
 export class PanZoomController {
 	private readonly behavior: ZoomBehavior<SVGSVGElement, unknown>;
 	private readonly selection: Selection<SVGSVGElement, unknown, null, undefined>;
 
-	constructor(svg: SVGSVGElement, group: SVGGElement, onTransform?: (t: ZoomTransform) => void) {
+	constructor(svg: SVGSVGElement, group: SVGGElement, options: PanZoomOptions = {}) {
 		this.behavior = zoom<SVGSVGElement, unknown>()
 			.scaleExtent([0.1, 4])
 			.on("zoom", (event) => {
 				group.setAttribute("transform", event.transform.toString());
-				onTransform?.(event.transform);
+				options.onTransform?.(event.transform);
+				if (event.sourceEvent) options.onUserInteraction?.();
 			});
 		this.selection = select(svg);
 		this.selection.call(this.behavior);

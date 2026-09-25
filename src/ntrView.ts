@@ -28,6 +28,10 @@ export class TreeView extends TextFileView {
 	}
 
 	getDisplayText(): string {
+		if (this.file) {
+			const override = this.plugin.settings.rootLabelOverrides[this.file.path];
+			if (override) return override;
+		}
 		return this.file?.basename ?? "Tree";
 	}
 
@@ -84,6 +88,11 @@ export class TreeView extends TextFileView {
 		return this.rawText;
 	}
 
+	/** Re-renders using the current root-label override, if any (called after a rename). */
+	refreshRootLabel(): void {
+		this.renderPreview();
+	}
+
 	/** Called by the sidebar textarea on every keystroke. */
 	applyText(newText: string): void {
 		if (newText === this.rawText) return;
@@ -93,7 +102,8 @@ export class TreeView extends TextFileView {
 	}
 
 	private renderPreview(): void {
-		const rootLabel = this.file?.basename ?? "Tree";
+		const override = this.file ? this.plugin.settings.rootLabelOverrides[this.file.path] : undefined;
+		const rootLabel = override ?? this.file?.basename ?? "Tree";
 		const tree = buildTree(this.rawText, rootLabel);
 
 		if (!this.renderer) {
