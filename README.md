@@ -50,9 +50,10 @@ CodeMirror engine Obsidian's own notes use — undo/redo, selection, and Ctrl+F 
 similar to a chat sidebar. It always edits whichever `.ntr` file was most recently focused in
 the main area — type there, and the dendrogram in the main pane updates live.
 
-The sidebar header has two icon buttons: **+** creates a new tree (asks where), and **↗**
-re-opens/switches to the currently-bound tree's tab — handy if the sidebar is still pointed at a
-tree whose tab you've since navigated away from.
+The sidebar header has four icon buttons: **outdent** / **indent** (apply to the current
+selection — the toolbar equivalent of Shift-Tab/Tab below), **↗** re-opens/switches to the
+currently-bound tree's tab (handy if the sidebar is still pointed at a tree whose tab you've
+since navigated away from), and **+** creates a new tree (asks where).
 
 **Tab / Shift-Tab** on one or more selected lines adds/removes a leading `-`, pushing them one
 level deeper or shallower — the outline equivalent of indent/outdent.
@@ -64,7 +65,8 @@ you can override it explicitly:
 
 - Right-click a `.ntr` file in the file explorer → **Rename tree**.
 - Run the **"Rename tree"** command while a tree is open.
-- Click the tree's name at the top of the ObsTree sidebar.
+- Click the tree's name at the top of the ObsTree sidebar — it's underlined with a pencil icon
+  next to it to show it's clickable.
 
 Clearing the name (or setting it back to the filename) removes the override.
 

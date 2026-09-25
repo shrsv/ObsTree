@@ -1,7 +1,7 @@
 import { EditorState, type Extension } from "@codemirror/state";
 import { EditorView, keymap, highlightActiveLine, highlightActiveLineGutter, lineNumbers, type Command } from "@codemirror/view";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { search, searchKeymap } from "@codemirror/search";
+import { defaultKeymap, history, historyKeymap, undo as cmUndo, redo as cmRedo } from "@codemirror/commands";
+import { search, searchKeymap, openSearchPanel } from "@codemirror/search";
 
 export interface SidebarEditorOptions {
 	onChange: (text: string) => void;
@@ -76,14 +76,31 @@ export class SidebarEditor {
 			state: EditorState.create({ doc: initialText, extensions }),
 			parent,
 		});
+	}
 
-		// Obsidian's own global hotkeys (Ctrl+F search, Ctrl+Z undo, etc.) listen on
-		// document and would otherwise steal these keys before CM6's bubble-phase
-		// handling on its own DOM gets a chance — once CM6 has handled a key (and thus
-		// called preventDefault on it), stop it from bubbling any further.
-		this.view.dom.addEventListener("keydown", (event) => {
-			if (event.defaultPrevented) event.stopPropagation();
-		});
+	/** Opens CM6's own search panel (Ctrl+F). Exposed so the owning view can wire it to its `Scope` — see sidebarView.ts for why that's necessary instead of just a keymap. */
+	openSearch(): void {
+		openSearchPanel(this.view);
+	}
+
+	undo(): void {
+		// @codemirror/commands resolves its own (newer) nested @codemirror/state copy since
+		// it needs a feature not in the exact version we pinned to match Obsidian's peer dep
+		// (see package.json), so TS sees two structurally-different EditorView types for the
+		// same runtime object. Harmless at runtime — same class, just a duplicate type identity.
+		cmUndo(this.view as unknown as Parameters<typeof cmUndo>[0]);
+	}
+
+	redo(): void {
+		cmRedo(this.view as unknown as Parameters<typeof cmRedo>[0]);
+	}
+
+	indentSelection(): void {
+		indentDash(this.view);
+	}
+
+	outdentSelection(): void {
+		outdentDash(this.view);
 	}
 
 	getText(): string {

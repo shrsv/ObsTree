@@ -28,13 +28,13 @@ export class DendrogramControls {
 	constructor(container: HTMLElement, callbacks: DendrogramControlsCallbacks) {
 		this.root = container.createDiv({ cls: "obs-tree-controls" });
 
-		const navRow = this.root.createDiv({ cls: "obs-tree-controls-row obs-tree-controls-nav" });
+		const navRow = this.root.createDiv({ cls: "obs-tree-controls-nav" });
 		navRow.createDiv({ cls: "obs-tree-controls-spacer" });
 		iconButton(navRow, "chevron-up", "Move up", () => callbacks.onNavigate("up"));
 		navRow.createDiv({ cls: "obs-tree-controls-spacer" });
 
 		iconButton(navRow, "chevron-left", "Move to parent", () => callbacks.onNavigate("left"));
-		iconButton(navRow, "scan", "Zoom to fit", () => callbacks.onFit());
+		iconButton(navRow, "crosshair", "Zoom to fit", () => callbacks.onFit());
 		iconButton(navRow, "chevron-right", "Move to first child", () => callbacks.onNavigate("right"));
 
 		navRow.createDiv({ cls: "obs-tree-controls-spacer" });

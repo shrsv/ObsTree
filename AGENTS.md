@@ -101,6 +101,23 @@ state) if the bound file's leaf gets closed.
   prompts when there's no `activeTreeView` yet — if you already have a tree focused, toggling the
   sidebar just reveals/hides it against that tree, it doesn't ask again.
 
+### Sidebar cursor color
+
+CM6 without the `drawSelection()` extension uses the browser's native contenteditable caret
+(we don't include `drawSelection()` — no need for its cross-browser selection rendering here),
+which is controlled by the CSS `caret-color` property, not a `.cm-cursor` DOM element. If you
+ever add `drawSelection()`, the caret becomes a real `.cm-cursorLayer .cm-cursor` element instead
+and this rule (`.obs-tree-sidebar-editor .cm-content { caret-color: ... }`) stops being what
+controls it — you'd need a `.cm-cursor` rule instead. Don't add both defensively; check which one
+is actually active.
+
+### Sidebar title = renamable, shown persistently
+
+The sidebar title (`titleTextEl`) always renders with a dotted underline plus a small pencil
+icon (`titleEl`'s second child) — not just on hover — specifically because the click-to-rename
+affordance wasn't discoverable without it. `bindTo()` must update `titleTextEl.setText(...)`,
+never `titleEl.setText(...)` — the latter would wipe out the pencil icon span alongside the text.
+
 ### Sidebar ↔ main-pane tab switching
 
 The sidebar can end up bound to a `.ntr` file whose tab isn't the active one anymore (user
@@ -113,14 +130,23 @@ private when refactoring.
 ### CodeMirror hotkeys vs. Obsidian's global hotkeys
 
 `SidebarEditor` wires `defaultKeymap`/`historyKeymap`/`searchKeymap` (undo/redo, Ctrl+F search,
-etc.), but CM6's own keydown handling on its `contentDOM` can still lose to Obsidian's global
-hotkey listener if Obsidian's listener also acts on the same keydown after CM6 already handled
-it. Fix: a bubble-phase `keydown` listener on `view.dom` that calls `event.stopPropagation()`
-*only if* `event.defaultPrevented` is already true (i.e. CM6 itself decided to handle that key) —
-this runs after CM6's own handling (which happens at/before the bubble phase reaches `view.dom`,
-since `contentDOM` is a descendant) and stops the event from reaching Obsidian's document-level
-listener, without swallowing keys CM6 didn't claim. Don't "fix" this by stopping propagation
-unconditionally — that would break normal typing (Obsidian's own editor-focus tracking, etc.).
+etc.), but a CM6 keymap binding alone isn't enough to make Ctrl+F/Ctrl+Z actually win inside an
+Obsidian view: Obsidian's own hotkeys are resolved via its `Scope` stack (`app.keymap`), and an
+`ItemView`'s `scope` is `null` by default — an unclaimed key with no scope simply falls through
+to Obsidian's global scope (its own search, etc.) regardless of what CM6's DOM-level keymap
+would have done with it. (An earlier attempt tried to fix this by guessing at DOM event
+capture/bubble ordering with `stopPropagation()` — that doesn't work, because Obsidian's global
+hotkey resolution isn't a plain DOM listener you can out-race that way.)
+
+The actual fix, and Obsidian's documented mechanism for exactly this situation
+(`View.scope`'s doc comment): `TreeSidebarView.onOpen()` sets `this.scope = new Scope(this.app.scope)`
+and explicitly registers the keys that must belong to the editor — `Mod-f`, `Mod-z`,
+`Mod-Shift-z`, `Mod-y` — each calling the matching `SidebarEditor` method (`openSearch()`,
+`undo()`, `redo()`) and returning `false` (Obsidian's documented signal to `preventDefault` and
+stop further resolution, i.e. claim the key). Obsidian pushes a view's `scope` onto the stack
+while that view is active, so this only intercepts these keys while the sidebar is focused. If a
+key isn't explicitly registered here, it still falls through to Obsidian's global hotkeys as
+normal — only claim what you actually need to override.
 
 ### Tab/Shift-Tab = indent/outdent, not literal indentation
 
@@ -129,7 +155,11 @@ tab character) — meaningless for this syntax, since depth is dash-count, not w
 `Tab`/`Shift-Tab` are bound to custom `indentDash`/`outdentDash` commands (`sidebarEditor.ts`)
 that prepend/remove one leading `-` on every line touched by the current selection (skipping
 blank lines on indent; a no-op on outdent for lines with no leading `-` to remove). This is the
-direct implementation of "push selected lines one level deeper/shallower".
+direct implementation of "push selected lines one level deeper/shallower". `SidebarEditor`
+exposes `indentSelection()`/`outdentSelection()` (thin wrappers calling the same command
+functions directly) so the sidebar header's indent/outdent toolbar buttons trigger identical
+behavior to the keyboard shortcut — don't reimplement the line-walking logic a second time for
+the buttons.
 
 ### Renderer-owned controls
 
@@ -141,6 +171,13 @@ top-left "Zoom to fit" button; that's gone — don't re-add page-level chrome fo
 renderer already owns. `controls.ts` imports `Menu`/`setIcon` directly from `"obsidian"` — that's
 an accepted exception to "renderer doesn't know about Obsidian", since it's UI chrome, not
 data/parsing logic; the parser (`src/parser.ts`) must still never import `"obsidian"`.
+
+The nav D-pad deliberately has no background/border/shadow of its own (just `.clickable-icon`
+buttons in a bare grid) — only the zoom row is a visible translucent panel
+(`color-mix(in srgb, var(--background-secondary) 65%, transparent)` + `backdrop-filter: blur()`,
+so it reads as a floating pill rather than an opaque box hiding the canvas underneath it). Keep
+that asymmetry if you touch `styles.css`'s `.obs-tree-controls-*` rules — the D-pad getting a box
+back was an earlier design that read as too heavy against the canvas.
 
 ### Export
 

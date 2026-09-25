@@ -38,15 +38,36 @@
 }
 
 .obs-tree-sidebar-title {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	min-width: 0;
 	font-weight: 600;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
 	cursor: pointer;
 }
 
-.obs-tree-sidebar-title:hover {
+.obs-tree-sidebar-title:hover .obs-tree-sidebar-title-text {
+	color: var(--text-accent);
+}
+
+.obs-tree-sidebar-title-text {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 	text-decoration: underline dotted;
+	text-decoration-color: var(--text-faint);
+	text-underline-offset: 3px;
+}
+
+.obs-tree-sidebar-title-pencil {
+	display: inline-flex;
+	flex-shrink: 0;
+	color: var(--text-faint);
+}
+
+.obs-tree-sidebar-title-pencil svg {
+	width: 11px;
+	height: 11px;
 }
 
 .obs-tree-sidebar-actions {
@@ -95,8 +116,8 @@
 	background: var(--text-selection) !important;
 }
 
-.obs-tree-sidebar-editor .cm-cursor {
-	border-left-color: var(--caret-color, var(--text-normal)) !important;
+.obs-tree-sidebar-editor .cm-content {
+	caret-color: var(--caret-color, var(--text-normal));
 }
 
 .obs-tree-sidebar-editor .cm-searchMatch {
@@ -226,13 +247,16 @@
 	display: flex;
 	align-items: center;
 	gap: 2px;
-	background: var(--background-secondary);
+	background-color: color-mix(in srgb, var(--background-secondary) 65%, transparent);
+	backdrop-filter: blur(6px);
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-m);
 	padding: 2px;
 	box-shadow: var(--shadow-s);
 }
 
+/* No box here, deliberately — just the four directional buttons + fit, floating directly
+   over the canvas so they don't read as a separate panel. */
 .obs-tree-controls-nav {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
