@@ -1,0 +1,123 @@
+.obs-tree-codeblock {
+	width: 100%;
+	height: 420px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	overflow: hidden;
+	background: var(--background-primary);
+}
+
+.obs-tree-view-root {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
+.obs-tree-toolbar {
+	display: flex;
+	gap: 0.5em;
+	padding: 0.5em;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.obs-tree-view-canvas {
+	flex: 1;
+	min-height: 0;
+}
+
+.obs-tree-view-textarea {
+	flex: 1;
+	min-height: 0;
+	width: 100%;
+	resize: none;
+	font-family: var(--font-monospace);
+	padding: 0.75em;
+	border: none;
+	background: var(--background-primary);
+	color: var(--text-normal);
+}
+
+.obs-tree-hidden {
+	display: none !important;
+}
+
+.obs-tree-dendrogram {
+	width: 100%;
+	height: 100%;
+	position: relative;
+	overflow: hidden;
+}
+
+.obs-tree-svg {
+	width: 100%;
+	height: 100%;
+	outline: none;
+	cursor: grab;
+}
+
+.obs-tree-svg:active {
+	cursor: grabbing;
+}
+
+.obs-tree-link {
+	fill: none;
+	stroke: var(--background-modifier-border-hover, var(--text-faint));
+	stroke-width: 1.5px;
+}
+
+.obs-tree-node-circle {
+	fill: var(--interactive-accent);
+	stroke: var(--background-primary);
+	stroke-width: 1px;
+}
+
+.obs-tree-node-label {
+	fill: var(--text-normal);
+	font-size: 12px;
+	font-family: var(--font-text);
+	user-select: none;
+}
+
+.obs-tree-node {
+	cursor: pointer;
+}
+
+.obs-tree-node-focused .obs-tree-node-circle {
+	fill: var(--text-on-accent);
+	stroke: var(--interactive-accent);
+	stroke-width: 2px;
+}
+
+.obs-tree-node-focused .obs-tree-node-label {
+	font-weight: 600;
+}
+
+/* Fixed palettes for the "Always dark" / "Always light" node-theme settings,
+   overriding the Obsidian-CSS-variable-driven "auto" defaults above. */
+.obs-tree-theme-dark {
+	background: #0d0d0d;
+}
+.obs-tree-theme-dark .obs-tree-link {
+	stroke: #3a3a3a;
+}
+.obs-tree-theme-dark .obs-tree-node-circle {
+	fill: #7cffb2;
+	stroke: #0d0d0d;
+}
+.obs-tree-theme-dark .obs-tree-node-label {
+	fill: #e8e8e8;
+}
+
+.obs-tree-theme-light {
+	background: #ffffff;
+}
+.obs-tree-theme-light .obs-tree-link {
+	stroke: #d0d0d0;
+}
+.obs-tree-theme-light .obs-tree-node-circle {
+	fill: #2563eb;
+	stroke: #ffffff;
+}
+.obs-tree-theme-light .obs-tree-node-label {
+	fill: #1a1a1a;
+}
