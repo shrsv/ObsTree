@@ -29,8 +29,24 @@ energy
 
 - **Inline in any note**: wrap the outline in a ` ```tree ` fenced code block. Renders inline in
   Reading view and Live Preview, updating whenever the block's text changes.
-- **Dedicated `.ntr` files**: click the ObsTree ribbon icon (or run "New tree note") to create a
-  standalone tree file with its own edit/preview toggle.
+- **Dedicated `.ntr` files**: a standalone tree file. The main pane is a preview-only canvas;
+  editing happens in the **ObsTree sidebar** (see below) so you always see the live dendrogram
+  next to what you're typing, instead of switching between an edit mode and a preview mode.
+
+### Creating a `.ntr` file
+
+- **Right-click a folder** in the file explorer → **New tree** — creates it there immediately
+  (same pattern as "New canvas"/"New drawing"), no prompts.
+- **Ribbon icon** (or the "Toggle ObsTree sidebar" command) opens the sidebar. If no tree is
+  currently focused, it asks which folder and name to create one with.
+- **"New tree note"** command — same folder/name prompt, from anywhere.
+
+## The ObsTree sidebar
+
+Click the ribbon icon to toggle a right-sidebar panel containing a text editor, similar to a
+chat sidebar. It always edits whichever `.ntr` file was most recently focused in the main area —
+type there, and the dendrogram in the main pane updates live. Click "New Tree" in the sidebar at
+any time to create and open another one.
 
 ## Interacting with the dendrogram
 
@@ -59,8 +75,8 @@ energy
 
 Open Settings → ObsTree to configure the default folder for new `.ntr` files, root-label
 behavior, node color theme, and live-update delay. Keyboard shortcuts for "New tree note" and
-"Toggle tree edit/preview" can be rebound from there too (pan/zoom/arrow-key navigation inside
-the canvas itself are not separately rebindable — they're always on while the canvas has focus).
+"Toggle ObsTree sidebar" can be rebound from there too (pan/zoom/arrow-key navigation inside the
+canvas itself are not separately rebindable — they're always on while the canvas has focus).
 
 ## Scope
 

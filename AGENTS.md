@@ -31,21 +31,62 @@ Matrix, etc. from notes2tree's picker) — those are explicitly out of scope for
 
 ## Layout
 
-- `main.ts` — plugin entry: settings wiring, ribbon icon, commands, view/extension/code-block
-  registration.
+- `main.ts` — plugin entry: settings wiring, ribbon icon (toggles the sidebar), commands,
+  view/extension/code-block registration, `active-leaf-change` tracking of the most-recently-
+  focused `TreeView` (`activeTreeView`), and the folder `file-menu` "New tree" item.
 - `src/parser.ts` — `TreeNode`, `parseOutlineToForest`, `buildTree` (dash-depth stack parser).
 - `src/rootLabel.ts` — `getMarkdownRootLabel` (H1-else-filename, markdown code-block path only).
-- `src/debounce.ts` — generic debounce utility, used by the `.ntr` edit-mode textarea.
+- `src/debounce.ts` — generic debounce utility, used by `TreeView.applyText`'s re-render.
+- `src/createTree.ts` — `ensureFolder`/`createUniqueTreeFile`, the shared file-creation helper
+  used by the folder context-menu item, `NewTreeModal`, and the `new-tree-note` command.
+- `src/newTreeModal.ts` — `NewTreeModal`, a small folder+name prompt used whenever there's no
+  implicit location for a new tree (ribbon/sidebar/command paths — a folder right-click already
+  has one, see below).
 - `src/settings.ts` — `ObsTreeSettings`, defaults, settings tab, `openHotkeySettings` helper.
 - `src/codeBlockProcessor.ts` — registers the ` ```tree ` fenced-code-block processor for
   regular `.md` notes.
-- `src/ntrView.ts` — `TreeView extends TextFileView`, the dedicated `.ntr` file view
-  (edit/preview toggle).
+- `src/ntrView.ts` — `TreeView extends TextFileView`, the `.ntr` file view. **Preview-only** —
+  it renders the dendrogram and nothing else; there is deliberately no in-pane edit mode. Exposes
+  `getRawText()`/`applyText(text)` for the sidebar to drive it.
+- `src/sidebarView.ts` — `TreeSidebarView extends ItemView`, the right-sidebar editor panel
+  (`VIEW_TYPE_TREE_SIDEBAR`). This is where all `.ntr` editing actually happens — a plain
+  textarea bound to whichever `TreeView` was most recently active, updating it on every
+  keystroke. See "Sidebar binding" below for why it isn't just "the active view".
 - `src/renderers/types.ts`, `src/renderers/registry.ts` — the renderer contract + factory.
 - `src/renderers/dendrogram/` — the only renderer: `DendrogramRenderer.ts` (lifecycle/orchestration),
   `layout.ts` (`d3-hierarchy` tree layout), `render.ts` (SVG DOM building, `d3-shape` link paths),
   `panzoom.ts` (`d3-zoom`/`d3-selection`/`d3-transition` pan/zoom + animated transitions),
   `keyboardNav.ts` (arrow-key traversal state — fully custom, no library covers this).
+
+## UX shape: sidebar editor, not in-pane edit/preview toggle
+
+Editing a `.ntr` file happens in the **ObsTree sidebar** (`src/sidebarView.ts`), not in the main
+pane — the main pane (`TreeView`) is preview-only, always showing the dendrogram, never a
+textarea. This was a deliberate revision away from an earlier "Edit"/"Preview" toggle button in
+the main pane: that hid the live-updating canvas while typing, which defeated the point of a
+live preview. The sidebar keeps both visible side by side, similar to a chat-panel UX (text
+input on the right, result in the main area).
+
+### Sidebar binding
+
+The sidebar is its own `WorkspaceLeaf`. If it tracked "the currently active leaf" naively,
+clicking into its own textarea would immediately un-focus the main-pane `TreeView` and break the
+binding. Instead, `main.ts` listens for `active-leaf-change` and only updates
+`plugin.activeTreeView` when the *newly* active view is a `TreeView` — it ignores the change
+when the user focuses the sidebar itself, so the binding survives. `TreeView.onClose` calls
+`plugin.handleTreeViewClosed(this)` to clear the binding (and tell the sidebar to show its empty
+state) if the bound file's leaf gets closed.
+
+### Creating a tree file: two paths, deliberately different
+
+- **Folder right-click → "New tree"** (registered via the `file-menu` workspace event, mirroring
+  how Excalidraw adds "New drawing" to the same menu): the location is already known from the
+  click target, so this creates + opens immediately with an auto-incremented name, no modal —
+  matches native "New note"/"New canvas" behavior.
+- **Ribbon icon / "New tree note" command / sidebar's "New Tree" button**: no implicit location,
+  so these open `NewTreeModal` to ask for a folder and name first. The ribbon specifically only
+  prompts when there's no `activeTreeView` yet — if you already have a tree focused, toggling the
+  sidebar just reveals/hides it against that tree, it doesn't ask again.
 
 ## Conventions
 

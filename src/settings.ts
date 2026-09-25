@@ -111,7 +111,7 @@ export class ObsTreeSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Keyboard shortcuts")
-			.setDesc("Customize the 'New tree note' and 'Toggle tree edit/preview' shortcuts.")
+			.setDesc("Customize the 'New tree note' and 'Toggle ObsTree sidebar' shortcuts.")
 			.addButton((btn) =>
 				btn.setButtonText("Customize hotkeys").onClick(() => {
 					openHotkeySettings(this.app);

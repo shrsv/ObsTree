@@ -7,12 +7,14 @@ import type { TreeRenderer } from "./renderers/types";
 
 export const VIEW_TYPE_TREE = "obs-tree-view";
 
+/**
+ * Preview-only .ntr view: renders the dendrogram, nothing else. Editing happens in the
+ * ObsTree sidebar (see src/sidebarView.ts), which binds to whichever TreeView was most
+ * recently focused and calls applyText() on every keystroke.
+ */
 export class TreeView extends TextFileView {
 	private rawText = "";
-	private mode: "preview" | "edit" = "preview";
-	private textareaEl!: HTMLTextAreaElement;
 	private canvasEl!: HTMLElement;
-	private modeButton!: HTMLButtonElement;
 	private renderer: TreeRenderer | null = null;
 	private scheduleRender: () => void;
 
@@ -43,8 +45,10 @@ export class TreeView extends TextFileView {
 			this.renderer?.destroy();
 			this.renderer = null;
 		}
-		this.textareaEl.value = data;
 		this.scheduleRender();
+		if (this.plugin.sidebarView?.isBoundTo(this)) {
+			this.plugin.sidebarView.syncTextFromBoundView();
+		}
 	}
 
 	clear(): void {
@@ -57,52 +61,40 @@ export class TreeView extends TextFileView {
 		container.addClass("obs-tree-view-root");
 
 		const toolbar = container.createDiv({ cls: "obs-tree-toolbar" });
-		this.modeButton = toolbar.createEl("button", { text: "Edit" });
-		this.modeButton.addEventListener("click", () => this.toggleMode());
-
 		const fitButton = toolbar.createEl("button", { text: "Zoom to fit" });
-		fitButton.addEventListener("click", () => {
-			// Root node's id is always fixed ("root" — see parser.ts buildTree), so
-			// focusing it zooms to its full subtree, i.e. the whole tree.
-			this.renderer?.focusNode?.("root");
-		});
+		fitButton.addEventListener("click", () => this.renderer?.focusNode?.("root"));
 
 		this.canvasEl = container.createDiv({ cls: "obs-tree-view-canvas" });
-		this.textareaEl = container.createEl("textarea", { cls: "obs-tree-view-textarea" });
-		this.textareaEl.addEventListener("input", () => {
-			this.rawText = this.textareaEl.value;
-			this.requestSave();
-			this.scheduleRender();
-		});
+		if (this.plugin.settings.nodeTheme !== "auto") {
+			this.canvasEl.addClass(`obs-tree-theme-${this.plugin.settings.nodeTheme}`);
+		}
 
-		this.setMode("preview");
+		this.renderPreview();
 	}
 
 	async onClose(): Promise<void> {
 		this.renderer?.destroy();
 		this.renderer = null;
+		this.plugin.handleTreeViewClosed(this);
 	}
 
-	toggleMode(): void {
-		this.setMode(this.mode === "preview" ? "edit" : "preview");
+	// --- sidebar integration ---
+
+	getRawText(): string {
+		return this.rawText;
 	}
 
-	private setMode(mode: "preview" | "edit"): void {
-		this.mode = mode;
-		this.modeButton.setText(mode === "preview" ? "Edit" : "Preview");
-		this.canvasEl.toggleClass("obs-tree-hidden", mode !== "preview");
-		this.textareaEl.toggleClass("obs-tree-hidden", mode !== "edit");
-		if (mode === "preview") this.renderPreview();
+	/** Called by the sidebar textarea on every keystroke. */
+	applyText(newText: string): void {
+		if (newText === this.rawText) return;
+		this.rawText = newText;
+		this.requestSave();
+		this.scheduleRender();
 	}
 
 	private renderPreview(): void {
 		const rootLabel = this.file?.basename ?? "Tree";
 		const tree = buildTree(this.rawText, rootLabel);
-
-		this.canvasEl.toggleClass(
-			`obs-tree-theme-${this.plugin.settings.nodeTheme}`,
-			this.plugin.settings.nodeTheme !== "auto"
-		);
 
 		if (!this.renderer) {
 			this.renderer = createRenderer("dendrogram");
