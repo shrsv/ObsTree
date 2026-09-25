@@ -3,6 +3,8 @@
 Obsidian plugin that turns a dash-indented text outline into an interactive dendrogram — the
 core capability of [notes2tree.com](https://notes2tree.com), native to your vault.
 
+![ObsTree: sidebar editor on the right, live dendrogram in the main pane](docs/images/obstree-screen.png)
+
 ## Syntax
 
 Depth = number of leading `-` characters. A line with no leading dash starts a new top-level
@@ -44,10 +46,16 @@ energy
 ## The ObsTree sidebar
 
 Click the ribbon icon to toggle a right-sidebar panel containing a real editor (the same
-CodeMirror engine Obsidian's own notes use — undo/redo, selection, Ctrl+F search all work),
+CodeMirror engine Obsidian's own notes use — undo/redo, selection, and Ctrl+F search all work),
 similar to a chat sidebar. It always edits whichever `.ntr` file was most recently focused in
-the main area — type there, and the dendrogram in the main pane updates live. Click "New Tree"
-in the sidebar at any time to create and open another one.
+the main area — type there, and the dendrogram in the main pane updates live.
+
+The sidebar header has two icon buttons: **+** creates a new tree (asks where), and **↗**
+re-opens/switches to the currently-bound tree's tab — handy if the sidebar is still pointed at a
+tree whose tab you've since navigated away from.
+
+**Tab / Shift-Tab** on one or more selected lines adds/removes a leading `-`, pushing them one
+level deeper or shallower — the outline equivalent of indent/outdent.
 
 ## Renaming the root node
 
@@ -83,6 +91,18 @@ fit"** to snap back to fit mode.
   `←` jumps to the parent, `→` jumps to the first child.
 - **Enter / Space** — zoom to fit the focused node's subtree.
 - **Escape** — zoom to fit the whole tree.
+
+A floating control cluster in the bottom-right corner mirrors all of this with clickable
+buttons — a directional pad (↑↓←→ plus a center "zoom to fit"), a +/− zoom widget with a live
+percentage readout, and an export button — so nothing here requires the keyboard. It's part of
+the dendrogram itself, so it shows up identically in a `.ntr` file's main pane and in an inline
+` ```tree ` code block.
+
+## Exporting
+
+The control cluster's export button (⬇) offers **PNG**, **JPEG**, and **HTML**. All three export
+the *whole* tree (not just what's currently visible/panned/zoomed to) using a fixed dark palette,
+so the file looks right on its own outside Obsidian regardless of your current theme.
 
 ## Install
 

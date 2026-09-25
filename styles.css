@@ -13,13 +13,6 @@
 	height: 100%;
 }
 
-.obs-tree-toolbar {
-	display: flex;
-	gap: 0.5em;
-	padding: 0.5em;
-	border-bottom: 1px solid var(--background-modifier-border);
-}
-
 .obs-tree-view-canvas {
 	flex: 1;
 	min-height: 0;
@@ -54,6 +47,13 @@
 
 .obs-tree-sidebar-title:hover {
 	text-decoration: underline dotted;
+}
+
+.obs-tree-sidebar-actions {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	flex-shrink: 0;
 }
 
 .obs-tree-sidebar-empty {
@@ -93,6 +93,10 @@
 
 .obs-tree-sidebar-editor .cm-selectionBackground {
 	background: var(--text-selection) !important;
+}
+
+.obs-tree-sidebar-editor .cm-cursor {
+	border-left-color: var(--caret-color, var(--text-normal)) !important;
 }
 
 .obs-tree-sidebar-editor .cm-searchMatch {
@@ -203,4 +207,48 @@
 }
 .obs-tree-theme-light .obs-tree-node-label {
 	fill: #1a1a1a;
+}
+
+/* Floating control cluster (nav pad + zoom widget + export), owned by DendrogramRenderer
+   itself so it appears identically in the main .ntr pane and in code-block embeds. */
+.obs-tree-controls {
+	position: absolute;
+	right: 10px;
+	bottom: 10px;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 6px;
+	z-index: 10;
+}
+
+.obs-tree-controls-row {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	padding: 2px;
+	box-shadow: var(--shadow-s);
+}
+
+.obs-tree-controls-nav {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	grid-template-rows: repeat(3, 1fr);
+	gap: 0;
+}
+
+.obs-tree-controls-nav .obs-tree-controls-spacer {
+	width: 28px;
+	height: 28px;
+}
+
+.obs-tree-zoom-percent {
+	min-width: 2.8em;
+	text-align: center;
+	font-size: 0.75em;
+	color: var(--text-muted);
+	user-select: none;
 }

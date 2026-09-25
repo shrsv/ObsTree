@@ -5,6 +5,8 @@ import { layoutTree } from "./layout";
 import { renderLinks, renderNodes } from "./render";
 import { PanZoomController } from "./panzoom";
 import { KeyboardNav } from "./keyboardNav";
+import { DendrogramControls } from "./controls";
+import { buildExportSvg, downloadSvgAsHtml, downloadSvgAsRaster, sanitizeFilename } from "./exportSvg";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -30,6 +32,7 @@ export class DendrogramRenderer implements TreeRenderer {
 	private linksGroup!: SVGGElement;
 	private nodesGroup!: SVGGElement;
 	private panZoom!: PanZoomController;
+	private controls!: DendrogramControls;
 	private keyboardNav = new KeyboardNav();
 	private nodesById = new Map<string, SVGGElement>();
 	private currentNodes: HierarchyPointNode<TreeNode>[] = [];
@@ -38,7 +41,7 @@ export class DendrogramRenderer implements TreeRenderer {
 	 * "Fit mode": on by default, and stays on across re-renders (new/removed nodes keep
 	 * getting auto-fitted) until the user manually pans/zooms or navigates to a specific
 	 * node/subtree. Re-enabled by zooming to the whole tree again (Escape, clicking the
-	 * root node, or the "Zoom to fit" button).
+	 * root node, or the "Zoom to fit" control).
 	 */
 	private autoFit = true;
 	private tooltipEl: HTMLElement | null = null;
@@ -65,11 +68,36 @@ export class DendrogramRenderer implements TreeRenderer {
 		zoomGroup.appendChild(this.nodesGroup);
 
 		this.panZoom = new PanZoomController(this.svg, zoomGroup, {
+			onTransform: (t) => this.controls.setZoomPercent(t.k),
 			onUserInteraction: () => {
 				this.autoFit = false;
 			},
 		});
 		this.svg.addEventListener("keydown", this.onKeyDown);
+
+		this.controls = new DendrogramControls(container, {
+			onZoomIn: () => {
+				this.autoFit = false;
+				this.panZoom.zoomBy(1.3);
+			},
+			onZoomOut: () => {
+				this.autoFit = false;
+				this.panZoom.zoomBy(1 / 1.3);
+			},
+			onFit: () => this.resetZoom(),
+			onNavigate: (direction) => {
+				const target =
+					direction === "down"
+						? this.keyboardNav.moveDown()
+						: direction === "up"
+							? this.keyboardNav.moveUp()
+							: direction === "left"
+								? this.keyboardNav.moveToParent()
+								: this.keyboardNav.moveToFirstChild();
+				if (target) this.applyFocusStyles(target.data.id);
+			},
+			onExport: (format) => void this.exportImage(format),
+		});
 
 		this.renderTree(tree, true);
 	}
@@ -83,10 +111,22 @@ export class DendrogramRenderer implements TreeRenderer {
 		if (node) this.focusAndZoom(node);
 	}
 
+	async exportImage(format: "png" | "jpeg" | "html"): Promise<void> {
+		const svgMarkup = buildExportSvg(this.nodesGroup, this.linksGroup, this.currentNodes);
+		const rootLabel = this.currentNodes.find((n) => n.data.id === "root")?.data.label ?? "tree";
+		const filenameBase = sanitizeFilename(rootLabel);
+		if (format === "html") {
+			downloadSvgAsHtml(svgMarkup, filenameBase);
+		} else {
+			await downloadSvgAsRaster(svgMarkup, filenameBase, format);
+		}
+	}
+
 	destroy(): void {
 		this.closeTooltip();
 		this.svg.removeEventListener("keydown", this.onKeyDown);
 		this.panZoom.destroy();
+		this.controls.destroy();
 		while (this.container.firstChild) this.container.removeChild(this.container.firstChild);
 	}
 
@@ -145,7 +185,7 @@ export class DendrogramRenderer implements TreeRenderer {
 				return;
 			}
 			case "Escape":
-				this.zoomToNodes(this.currentNodes, true);
+				this.resetZoom();
 				event.preventDefault();
 				return;
 			default:
@@ -156,6 +196,10 @@ export class DendrogramRenderer implements TreeRenderer {
 			this.applyFocusStyles(target.data.id);
 		}
 	};
+
+	private resetZoom(): void {
+		this.zoomToNodes(this.currentNodes, true);
+	}
 
 	private focusAndZoom(node: HierarchyPointNode<TreeNode>): void {
 		this.keyboardNav.focusId(node.data.id);

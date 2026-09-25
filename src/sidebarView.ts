@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf } from "obsidian";
+import { ItemView, WorkspaceLeaf, setIcon } from "obsidian";
 import type ObsTreePlugin from "../main";
 import type { TreeView } from "./ntrView";
 import { NewTreeModal } from "./newTreeModal";
@@ -15,6 +15,7 @@ export const VIEW_TYPE_TREE_SIDEBAR = "obs-tree-sidebar";
 export class TreeSidebarView extends ItemView {
 	private boundView: TreeView | null = null;
 	private titleEl!: HTMLElement;
+	private revealButton!: HTMLElement;
 	private emptyEl!: HTMLElement;
 	private editorContainer!: HTMLElement;
 	private editor: SidebarEditor | null = null;
@@ -44,17 +45,30 @@ export class TreeSidebarView extends ItemView {
 
 		const header = container.createDiv({ cls: "obs-tree-sidebar-header" });
 		this.titleEl = header.createEl("div", { cls: "obs-tree-sidebar-title", text: "No tree open" });
+		this.titleEl.setAttribute("aria-label", "Click to rename this tree");
 		this.titleEl.addEventListener("click", () => {
 			if (this.boundView?.file) promptRenameTree(this.plugin, this.boundView.file);
 		});
-		const newButton = header.createEl("button", { text: "New Tree" });
+
+		const actions = header.createDiv({ cls: "obs-tree-sidebar-actions" });
+		this.revealButton = actions.createEl("button", {
+			cls: "clickable-icon",
+			attr: { "aria-label": "Open this tree's tab" },
+		});
+		setIcon(this.revealButton, "arrow-up-right");
+		this.revealButton.addEventListener("click", () => {
+			if (this.boundView) this.plugin.app.workspace.revealLeaf(this.boundView.leaf);
+		});
+
+		const newButton = actions.createEl("button", { cls: "clickable-icon", attr: { "aria-label": "New tree" } });
+		setIcon(newButton, "plus");
 		newButton.addEventListener("click", () => {
 			new NewTreeModal(this.plugin, this.plugin.settings.ntrDefaultFolder).open();
 		});
 
 		this.emptyEl = container.createDiv({
 			cls: "obs-tree-sidebar-empty",
-			text: 'Open a .ntr tree file (or click "New Tree") to edit it here.',
+			text: 'Open a .ntr tree file (or click "New tree") to edit it here.',
 		});
 
 		this.editorContainer = container.createDiv({ cls: "obs-tree-sidebar-editor" });
@@ -84,6 +98,7 @@ export class TreeSidebarView extends ItemView {
 
 		if (view) {
 			this.titleEl.setText(view.getDisplayText());
+			this.revealButton.toggleClass("obs-tree-hidden", false);
 			this.editorContainer.toggleClass("obs-tree-hidden", false);
 			this.emptyEl.toggleClass("obs-tree-hidden", true);
 
@@ -96,6 +111,7 @@ export class TreeSidebarView extends ItemView {
 			}
 		} else {
 			this.titleEl.setText("No tree open");
+			this.revealButton.toggleClass("obs-tree-hidden", true);
 			this.editorContainer.toggleClass("obs-tree-hidden", true);
 			this.emptyEl.toggleClass("obs-tree-hidden", false);
 		}

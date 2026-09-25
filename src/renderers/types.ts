@@ -6,5 +6,6 @@ export interface TreeRenderer {
 	mount(container: HTMLElement, tree: TreeNode): void;
 	update(tree: TreeNode): void;
 	focusNode?(nodeId: string): void;
+	exportImage?(format: "png" | "jpeg" | "html"): Promise<void>;
 	destroy(): void;
 }

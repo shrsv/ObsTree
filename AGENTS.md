@@ -57,16 +57,20 @@ Matrix, etc. from notes2tree's picker) — those are explicitly out of scope for
   it renders the dendrogram and nothing else; there is deliberately no in-pane edit mode. Exposes
   `getRawText()`/`applyText(text)` for the sidebar to drive it.
 - `src/sidebarView.ts` — `TreeSidebarView extends ItemView`, the right-sidebar editor panel
-  (`VIEW_TYPE_TREE_SIDEBAR`). This is where all `.ntr` editing actually happens — a plain
-  textarea bound to whichever `TreeView` was most recently active, updating it on every
-  keystroke. See "Sidebar binding" below for why it isn't just "the active view".
+  (`VIEW_TYPE_TREE_SIDEBAR`). This is where all `.ntr` editing actually happens — a `SidebarEditor`
+  (real CM6 instance) bound to whichever `TreeView` was most recently active, updating it on
+  every keystroke. Header has two icon buttons: "New tree" and "reveal" (jump to the bound
+  view's tab — see "Sidebar ↔ main-pane tab switching" below). See "Sidebar binding" below for
+  why the bound view isn't just "the active view".
 - `src/renderers/types.ts`, `src/renderers/registry.ts` — the renderer contract + factory.
 - `src/renderers/dendrogram/` — the only renderer: `DendrogramRenderer.ts` (lifecycle/orchestration),
   `layout.ts` (`d3-hierarchy` tree layout), `render.ts` (SVG DOM building, `d3-shape` link paths),
   `panzoom.ts` (`d3-zoom`/`d3-selection`/`d3-transition` pan/zoom + animated transitions),
   `keyboardNav.ts` (arrow-key traversal state — fully custom, no library covers this),
   `textMeasure.ts` (canvas-measured word-wrap + ellipsis truncation, shared by `layout.ts` and
-  `render.ts` so they always wrap identically — see "Label wrapping" below).
+  `render.ts` so they always wrap identically — see "Label wrapping" below), `controls.ts`
+  (the floating bottom-right D-pad/zoom/export button cluster — see "Renderer-owned controls"
+  below), `exportSvg.ts` (PNG/JPEG/HTML export — see "Export" below).
 
 ## UX shape: sidebar editor, not in-pane edit/preview toggle
 
@@ -96,6 +100,59 @@ state) if the bound file's leaf gets closed.
   so these open `NewTreeModal` to ask for a folder *and* name first. The ribbon specifically only
   prompts when there's no `activeTreeView` yet — if you already have a tree focused, toggling the
   sidebar just reveals/hides it against that tree, it doesn't ask again.
+
+### Sidebar ↔ main-pane tab switching
+
+The sidebar can end up bound to a `.ntr` file whose tab isn't the active one anymore (user
+clicked elsewhere, closed/reordered tabs, etc.) — since editing happens in the sidebar, there
+was no way back to that tab short of hunting for it. The sidebar header's "reveal" button
+(`arrow-up-right` icon) calls `plugin.app.workspace.revealLeaf(this.boundView.leaf)`, which is
+why `TreeView`'s `leaf` (inherited from `View`, public in Obsidian's API) matters — don't make it
+private when refactoring.
+
+### CodeMirror hotkeys vs. Obsidian's global hotkeys
+
+`SidebarEditor` wires `defaultKeymap`/`historyKeymap`/`searchKeymap` (undo/redo, Ctrl+F search,
+etc.), but CM6's own keydown handling on its `contentDOM` can still lose to Obsidian's global
+hotkey listener if Obsidian's listener also acts on the same keydown after CM6 already handled
+it. Fix: a bubble-phase `keydown` listener on `view.dom` that calls `event.stopPropagation()`
+*only if* `event.defaultPrevented` is already true (i.e. CM6 itself decided to handle that key) —
+this runs after CM6's own handling (which happens at/before the bubble phase reaches `view.dom`,
+since `contentDOM` is a descendant) and stops the event from reaching Obsidian's document-level
+listener, without swallowing keys CM6 didn't claim. Don't "fix" this by stopping propagation
+unconditionally — that would break normal typing (Obsidian's own editor-focus tracking, etc.).
+
+### Tab/Shift-Tab = indent/outdent, not literal indentation
+
+The sidebar editor doesn't use `@codemirror/commands`' `indentWithTab` (which inserts a literal
+tab character) — meaningless for this syntax, since depth is dash-count, not whitespace. Instead
+`Tab`/`Shift-Tab` are bound to custom `indentDash`/`outdentDash` commands (`sidebarEditor.ts`)
+that prepend/remove one leading `-` on every line touched by the current selection (skipping
+blank lines on indent; a no-op on outdent for lines with no leading `-` to remove). This is the
+direct implementation of "push selected lines one level deeper/shallower".
+
+### Renderer-owned controls
+
+`DendrogramRenderer` mounts its own `DendrogramControls` (`controls.ts`) into its container —
+not `TreeView`. This means the floating bottom-right D-pad/zoom/export cluster automatically
+shows up identically in the main `.ntr` pane *and* inline ` ```tree ` code-block embeds, with
+zero extra wiring in `ntrView.ts` or `codeBlockProcessor.ts`. `TreeView` used to render its own
+top-left "Zoom to fit" button; that's gone — don't re-add page-level chrome for something the
+renderer already owns. `controls.ts` imports `Menu`/`setIcon` directly from `"obsidian"` — that's
+an accepted exception to "renderer doesn't know about Obsidian", since it's UI chrome, not
+data/parsing logic; the parser (`src/parser.ts`) must still never import `"obsidian"`.
+
+### Export
+
+`exportSvg.ts`'s `buildExportSvg()` clones the *current* `nodesGroup`/`linksGroup` SVG elements
+(so it always matches what's rendered) into a **new, standalone SVG** sized to the full tree's
+bounding box — not the current viewport/pan/zoom — with a fixed dark color palette inlined via a
+`<style>` block (not Obsidian CSS variables, which don't exist outside Obsidian). PNG/JPEG export
+loads that SVG into an `Image`, draws it to an offscreen `<canvas>` at 2x scale, and
+`canvas.toBlob()`s it; HTML export just wraps the SVG markup in a minimal standalone page. Both
+funnel through `downloadBlob()` (object-URL + synthetic `<a download>` click). If you add a new
+renderer type later and want it exportable, implement `TreeRenderer.exportImage?` on it — don't
+assume every renderer is SVG-based when writing shared export code.
 
 ### Root-label overrides
 
@@ -136,7 +193,7 @@ re-fits automatically as nodes are added/removed while typing) until the user ma
 zooms (detected via `PanZoomController`'s `onUserInteraction`, which only fires for
 `event.sourceEvent`-driven — i.e. real user — zoom events, never programmatic `transformTo()`
 calls) or navigates to a specific node/subtree. Zooming to the *whole* tree again (Escape,
-clicking the root node, or the toolbar's "Zoom to fit") sets it back to `true`. See
+clicking the root node, or the controls cluster's "Zoom to fit" button) sets it back to `true`. See
 `zoomToNodes(nodes, isFullFit)` in `DendrogramRenderer.ts` — this is the one method that both
 performs a zoom and decides whether to re-arm auto-fit; every zoom call in the file goes through
 it rather than touching `autoFit` directly.

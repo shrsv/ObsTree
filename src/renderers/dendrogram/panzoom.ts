@@ -29,6 +29,11 @@ export class PanZoomController {
 		this.selection.transition().duration(durationMs).call(this.behavior.transform, target);
 	}
 
+	/** Zooms by a multiplicative factor around the viewport center (used by the +/- zoom buttons). */
+	zoomBy(factor: number, durationMs = 200): void {
+		this.selection.transition().duration(durationMs).call(this.behavior.scaleBy, factor);
+	}
+
 	destroy(): void {
 		this.selection.on(".zoom", null);
 	}

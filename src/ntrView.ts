@@ -64,10 +64,6 @@ export class TreeView extends TextFileView {
 		container.empty();
 		container.addClass("obs-tree-view-root");
 
-		const toolbar = container.createDiv({ cls: "obs-tree-toolbar" });
-		const fitButton = toolbar.createEl("button", { text: "Zoom to fit" });
-		fitButton.addEventListener("click", () => this.renderer?.focusNode?.("root"));
-
 		this.canvasEl = container.createDiv({ cls: "obs-tree-view-canvas" });
 		if (this.plugin.settings.nodeTheme !== "auto") {
 			this.canvasEl.addClass(`obs-tree-theme-${this.plugin.settings.nodeTheme}`);
