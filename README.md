@@ -53,6 +53,17 @@ energy
   currently focused, it asks which folder and name to create one with.
 - **"New tree note"** command — same folder/name prompt, from anywhere.
 
+### Inline embed, in practice
+
+A dash-indented outline in a ` ```tree ` block:
+
+![A tree code block in a note: a root "blah" with two children, "blah 1" (itself with a child) and "blah 2"](docs/images/obstree-embed2.png)
+
+…renders right there in the note as a live dendrogram, controls minimized to a single toggle
+icon in the corner:
+
+![The same block rendered inline: root "September 25th 2026" leading to blah, blah 1, blah 2, blah 1.1, with the small controls toggle top-right](docs/images/obstree-embed1.png)
+
 ## The ObsTree sidebar
 
 Click the ribbon icon to toggle a right-sidebar panel containing a real editor (the same
