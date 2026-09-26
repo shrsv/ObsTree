@@ -239,6 +239,14 @@
 	z-index: 11;
 }
 
+/* Reading view overlays its own "edit this code block" </> icon in the same top-right corner
+   of a code block, which our toggle would otherwise sit on top of — nudge ours down so it
+   lands just below that icon instead. Only ```tree embeds (.obs-tree-codeblock) have that
+   native icon; the main .ntr pane doesn't, so it keeps the default top position. */
+.obs-tree-codeblock .obs-tree-controls-toggle {
+	top: 34px;
+}
+
 /* Floating control cluster (nav pad + zoom widget + export), owned by DendrogramRenderer
    itself so it appears identically in the main .ntr pane and in code-block embeds. */
 .obs-tree-controls {

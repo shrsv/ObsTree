@@ -192,6 +192,14 @@ option — `DendrogramControls` owns the show/hide state and toggle button itsel
 (`controls.ts`'s `setVisible`/`applyVisibility`), so both call sites get identical behavior for
 free.
 
+Reading view overlays its own native "edit this code block" `</>` icon in the same top-right
+corner for any fenced code block, which visually collided with our toggle in embeds specifically.
+Fixed with a CSS-only, embed-scoped override — `.obs-tree-codeblock .obs-tree-controls-toggle`
+(in `styles.css`) nudges `top` down below where that native icon sits — rather than touching
+`controls.ts`'s positioning logic, since the main `.ntr` pane (no native icon there) needs the
+default position unchanged. If Obsidian ever changes where that native icon sits, adjust this one
+selector's `top` value; don't add a second toggle-positioning code path in TypeScript for it.
+
 ### Fitting a not-yet-laid-out container (code-block embeds)
 
 A fresh ` ```tree ` embed's container can have `getBoundingClientRect()` report `0×0` at the

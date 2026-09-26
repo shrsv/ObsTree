@@ -1,7 +1,7 @@
 {
 	"id": "obs-tree",
 	"name": "ObsTree",
-	"version": "0.6.0",
+	"version": "0.6.1",
 	"minAppVersion": "1.4.0",
 	"description": "Turn dash-indented outlines into interactive dendrogram visualizations.",
 	"author": "athreyac4",
